@@ -1,0 +1,31 @@
+#  1 + 3 + 5 + . . . + (2n-1) = n²
+import pandas as pd
+
+def cek_pernyataan_1(n):
+    jumlah = sum(2*i - 1 for i in range(1, n+1))
+    return jumlah, n**2, jumlah == n**2
+
+data_1 = []
+for n in range(11):
+    kiri, kanan, valid = cek_pernyataan_1(n)
+    data_1.append({"n": n, "Jumlah ganjil": kiri, "n^2": kanan, "Valid?": valid})
+
+df1 = pd.DataFrame(data_1)
+print(df1)
+
+# n! ≥ 2^(n−1)
+import math
+import pandas as pd
+
+def cek_pernyataan_4(n):
+    faktorial = math.factorial(n)
+    pangkat2 = 2**(n-1)
+    return faktorial, pangkat2, faktorial >= pangkat2
+
+data_4 = []
+for n in range(11):
+    kiri, kanan, valid = cek_pernyataan_4(n)
+    data_4.append({"n": n, "n!": kiri, "2^(n-1)": kanan, "Valid?": valid})
+
+df4 = pd.DataFrame(data_4)
+print(df4)

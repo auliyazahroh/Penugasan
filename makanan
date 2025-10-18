@@ -1,0 +1,115 @@
+# Upload File
+from google.colab import files
+uploaded = files.upload()
+
+# Import Library
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Membaca File
+df = pd.read_csv('makanan.csv')
+df.head()
+
+# Instalasi Prameter
+NPM = 19102
+np.random.seed(NPM)
+budget_awal = 1e6
+
+# Bobot Penilaian
+wkenyang_base = 0.8
+wrasa_base = 0.7
+wsehat_base = 0.9
+wbosan_base = 0.2
+
+# Parameter Simulasi
+SAMPLE_NUM = 500
+SISA_MININUM = 150e3
+SISA_MAKSIMUM = 300e3
+bin_sisa = np.arange(SISA_MININUM, SISA_MAKSIMUM, 1000)
+
+# Inisialisasi Variabel Penyimpanan Hasil Simulasi
+sampleid = np.arange(SAMPLE_NUM)
+skor = np.zeros(SAMPLE_NUM)
+sisa = np.zeros(SAMPLE_NUM)
+sehat = np.zeros(SAMPLE_NUM)
+resp_sehat = np.zeros((SAMPLE_NUM, len(bin_sisa)))
+resp_pilih = np.zeros((SAMPLE_NUM, 62))
+
+# Simulasi Pola Makanan
+for n in range(SAMPLE_NUM):
+    budget = budget_awal
+    skor_kumulatif = 0
+    skor_sehat = 0
+
+    for i in range(31):
+        # Makan pertama
+        pilihan = np.random.randint(0, len(makan))
+        w_kenyang = np.random.normal(loc=wkenyang_base, scale=0.2)
+        w_rasa = np.random.normal(loc=wrasa_base, scale=0.2)
+        w_sehat = np.random.normal(loc=wsehat_base, scale=0.4)
+        w_bosan = np.random.normal(loc=wbosan_base, scale=0.2)
+
+        skor_kumulatif += (
+            w_kenyang * makan["kenyang"][pilihan]
+            + w_rasa * makan["rasa"][pilihan]
+            + w_sehat * makan["sehat"][pilihan]
+            - w_bosan * makan["bosan"][pilihan]
+        )
+        skor_sehat += makan["sehat"][pilihan] - 0.5
+        budget -= makan["harga"][pilihan]
+        resp_pilih[n][2 * i] = pilihan
+
+        # Makan kedua
+        pilihan = np.random.randint(0, len(makan))
+        w_kenyang = np.random.normal(loc=wkenyang_base, scale=0.2)
+        w_rasa = np.random.normal(loc=wrasa_base, scale=0.2)
+        w_sehat = np.random.normal(loc=wsehat_base + 0.2, scale=0.4)
+        w_bosan = np.random.normal(loc=wbosan_base * 2, scale=0.2)
+
+        skor_kumulatif += (
+            w_kenyang * makan["kenyang"][pilihan]
+            + w_rasa * makan["rasa"][pilihan]
+            + w_sehat * makan["sehat"][pilihan]
+            - w_bosan * makan["bosan"][pilihan]
+        )
+        skor_sehat += makan["sehat"][pilihan] - 0.5
+        budget -= makan["harga"][pilihan]
+        resp_pilih[n][2 * i + 1] = pilihan
+
+    sisa[n] = budget
+    skor[n] = skor_kumulatif
+    sehat[n] = skor_sehat
+
+    if SISA_MININUM <= budget < SISA_MAKSIMUM:
+        resp_sehat[n][int((budget - SISA_MININUM) / 1000)] = skor_sehat
+
+# Penugasan
+# # Pola Makan dengan Nilai Kumulatif Kesehatan Positif
+idx_sehat = np.where(sehat > 0)[0]
+# # Titik dengan Sisa Uang Positif
+idx_sisa_positif = idx_sehat[sisa[idx_sehat] > 0]
+# # Titik dengan Skor Kumulatif Terbesar
+idx_skor_maks = idx_sehat[np.argmax(skor[idx_sehat])]
+# # Jadwal Makanan dari Pola Terbaik
+jadwal_terbaik = resp_pilih[idx_skor_maks].astype(int)
+jadwal_makan = makan.iloc[jadwal_terbaik % len(makan)]["makanan"].values
+
+# Visualisasi 3D
+fig = plt.figure(figsize=(10, 6))
+ax = fig.add_subplot(projection="3d")
+Y, X = np.meshgrid(bin_sisa, sampleid)
+surf = ax.plot_surface(X, Y, resp_sehat, cmap="plasma", edgecolor="none")
+ax.set_title("Hubungan Sisa Uang dan Skor Kesehatan")
+ax.set_xlabel("Sample ID")
+ax.set_ylabel("Sisa Uang (Rp)")
+ax.set_zlabel("Skor Sehat Kumulatif")
+fig.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
+plt.tight_layout()
+plt.show()
+
+print(f"Jumlah pola makan sehat: {len(idx_sehat)}")
+print(f"Jumlah dengan sisa uang positif: {len(idx_sisa_positif)}")
+print(f"Indeks skor kumulatif tertinggi: {idx_skor_maks}")
+print("10 makanan pertama pada jadwal terbaik:")
+print(jadwal_makan[:10])
